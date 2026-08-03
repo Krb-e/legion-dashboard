@@ -617,12 +617,10 @@ function mkDonut(id,labels,data){
       layout:{padding:8},
       plugins:{legend:{display:false},
         tooltip:{callbacks:{label:c=>' '+c.label+': '+fmtInt(c.parsed)}},
-        datalabels:window.ChartDataLabels?{
-          anchor:'center', align:'center', offset:0, clamp:true,
-          color:'#191919', font:{size:9,weight:700},
-          // solo porciones con lugar suficiente; el resto ya figura en la leyenda
-          formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((s,x)=>s+x,0);const pc=t?v/t*100:0;return pc>=8?pc.toFixed(0)+'%':'';}
-        }:{display:false}}}
+        // Sin porcentajes sobre el anillo: quedaban montados en el borde (mismo defecto en el
+        // dashboard de Regina). La leyenda al costado ya los muestra con un decimal, y el
+        // tooltip agrega el conteo. Para volver a activarlos: display:true + formatter.
+        datalabels:{display:false}}}
   });
 }
 function goTo(id,el){
