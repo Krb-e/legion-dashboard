@@ -26,7 +26,7 @@ body::after{content:'';position:fixed;inset:0;background-image:url("data:image/s
 .ke-nav-logo img{width:30px;height:30px;object-fit:contain;}
 .ke-nav-logo .lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;line-height:1.2;}
 .ke-nav-logo .lbl span{color:var(--ke-orange);}
-.ke-nav-logo .lbl small{display:block;color:var(--ke-muted);font-size:8px;letter-spacing:.18em;}
+.ke-nav-logo .lbl small{display:block;margin-top:5px;color:var(--ke-muted);font-size:8px;letter-spacing:.18em;line-height:1.1;}
 .ke-nav-tab{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;padding:16px 12px;cursor:pointer;color:var(--ke-muted);border-bottom:3px solid transparent;white-space:nowrap;transition:color .15s;}
 .ke-nav-tab:hover{color:var(--ke-text);}
 .ke-nav-tab.active{color:var(--ke-orange);border-bottom-color:var(--ke-orange);}.pdf-modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:300;align-items:center;justify-content:center;}.pdf-modal-box{width:min(420px,90vw);margin:0;max-height:80vh;overflow-y:auto;}
@@ -141,7 +141,8 @@ table.ke-t tfoot td:first-child{text-align:left;}
 .adm{background:#191919;border:1px solid var(--ke-border);border-radius:8px;padding:8px 10px;}
 .adm .l{font-size:8px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ke-muted);}
 .adm .v{font-size:15px;font-family:'General Sans',sans-serif;color:var(--ke-text);margin-top:3px;}
-.donut-wrap{position:relative;}
+.donut-wrap{position:relative;aspect-ratio:1/1;}
+.donut-wrap canvas{display:block;}
 .donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;}
 .legend-tr{display:flex;align-items:center;gap:8px;font-size:11px;padding:3px 0;color:rgba(230,230,230,.82);}
 .legend-tr .dot{width:9px;height:9px;border-radius:50%;flex:none;}
@@ -247,9 +248,20 @@ table.ke-t tfoot td:first-child{text-align:left;}
     
   </div>
   <div class="tb-custom">
+    <button class="tb-apply" id="btnPdf" onclick="exportPDF()">⬇ Exportar PDF</button>
   </div>
 </div>
 
+<div id="pdfModal" class="pdf-modal-overlay" onclick="if(event.target===this)closePdfModal();">
+  <div class="ke-block pdf-modal-box">
+    <div class="ke-block-top"></div>
+    <div class="ke-bh" style="display:flex;align-items:center;justify-content:space-between;">
+      <span class="ke-bt">Exportar PDF</span>
+      <button class="ke-nav-mobile-close" onclick="closePdfModal()" aria-label="Cerrar">&times;</button>
+    </div>
+    <div class="ke-bbody" id="pdfModalList" style="padding:16px;"></div>
+  </div>
+</div>
 
 <section id="p0" class="ke-page active">
   <div class="ke-pg-header">
@@ -330,6 +342,8 @@ table.ke-t tfoot td:first-child{text-align:left;}
   <div class="ke-sec-head"><div class="ke-sec-line"></div><span class="ke-sec-label">Top creativos · Meta Ads</span><span class="ke-goal-mes">Ranking por valor de compras · hook prom. <b id="stat-hook">—</b></span></div>
   <div id="adcards"></div>
 
+  <div class="ke-sec-head"><div class="ke-sec-line"></div><span class="ke-sec-label">Conclusiones &amp; accionables · Paid Media</span></div>
+  <div id="insights-pm" class="ke-ins-wrap"><div class="ke-pg-sub">Cargando…</div></div>
 </section>
 
 
@@ -434,12 +448,14 @@ table.ke-t tfoot td:first-child{text-align:left;}
   </div>
 
   <!-- Conclusiones -->
+  <div class="ke-sec-head"><div class="ke-sec-line"></div><span class="ke-sec-label">Conclusiones &amp; accionables · Social Media</span></div>
+  <div id="insights-sm" class="ke-ins-wrap"><div class="ke-pg-sub">Cargando…</div></div>
 </section>
 
 
 </div>
 
-<div class="ke-footer"><span>Krab-e · Legión Extranjera</span><span>Actualización diaria 08:00 - Todos los derechos © 2026</span></div>
+<div class="ke-footer"><span>Krab-e · Legión Extranjera</span><span>Actualización diaria, todos los derechos reservados 2026</span></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -595,7 +611,7 @@ function mkDonut(id,labels,data){
   charts[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[
     {data,backgroundColor:colors,borderWidth:0,weight:4},
     {data,backgroundColor:colors.map(c=>c+'55'),borderWidth:0,weight:1}
-  ]},options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{display:false},
+  ]},options:{responsive:true,maintainAspectRatio:true,aspectRatio:1,cutout:'58%',plugins:{legend:{display:false},
     datalabels:window.ChartDataLabels?{display:ctx=>ctx.datasetIndex===0,color:'#191919',font:{size:9,weight:700},formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((s,x)=>s+x,0);const pc=t?v/t*100:0;return pc>=6?pc.toFixed(0)+'%':'';}}:{display:false}}}});
 }
 function goTo(id,el){
@@ -633,10 +649,113 @@ function applyCustom(){
   document.querySelectorAll('.tb-pill').forEach(p=>p.classList.remove('active'));
   setRange(from,to);
 }
+function exportPDF(){
+  if(!window.html2canvas||!window.jspdf){alert('Las librerías de PDF aún se están cargando, probá en unos segundos.');return;}
+  const modal=document.getElementById('pdfModal');
+  const list=document.getElementById('pdfModalList');
+  if(!modal||!list)return;
+  list.innerHTML='';
+  const activeTab=document.querySelector('.ke-nav-tabs-desktop .ke-nav-tab.active');
+  const pageName=activeTab?activeTab.textContent:'hoja actual';
+  const btnCurrent=document.createElement('button');
+  btnCurrent.className='tb-apply'; btnCurrent.style.cssText='display:block;width:100%;text-align:left;margin-bottom:8px;';
+  btnCurrent.textContent='Exportar hoja actual ('+pageName+')';
+  btnCurrent.onclick=()=>{closePdfModal();runExportPDF('current');};
+  list.appendChild(btnCurrent);
+  const btnAll=document.createElement('button');
+  btnAll.className='tb-apply'; btnAll.style.cssText='display:block;width:100%;text-align:left;';
+  btnAll.textContent='Descargar todo';
+  btnAll.onclick=()=>{closePdfModal();runExportPDF('all');};
+  list.appendChild(btnAll);
+  modal.style.display='flex';
+}
+function closePdfModal(){const m=document.getElementById('pdfModal');if(m)m.style.display='none';}
+async function runExportPDF(mode){
+  const btn=document.getElementById('btnPdf');
+  const t0=btn?btn.textContent:''; if(btn){btn.textContent='Generando…';btn.disabled=true;}
+  const tb=document.querySelector('.ke-toolbar');
+  const pages=[...document.querySelectorAll('.ke-page')];
+  const activeId=(document.querySelector('.ke-page.active')||{}).id;
+  let tempWrap=null;
+  try{
+    if(tb)tb.style.display='none';
+    let target;
+    if(mode==='current'){
+      target=document.getElementById(activeId);
+    }else{
+      pages.forEach(pg=>pg.classList.add('active'));
+      target=document.querySelector('.ke-wrap');
+    }
+    const canvas=await html2canvas(target,{backgroundColor:'#191919',scale:2,useCORS:true,logging:false,windowWidth:target.scrollWidth});
+    // Paginación A4 en píxeles (1190x1684, ~144dpi) usando jsPDF con unit:'px' para mapeo directo sin conversión mm.
+    const PAGE_W=1190,PAGE_H=1684;
+    const {jsPDF}=window.jspdf;
+    const pdf=new jsPDF({unit:'px',format:[PAGE_W,PAGE_H]});
+    const scaledH=canvas.height*PAGE_W/canvas.width;
+    const img=canvas.toDataURL('image/jpeg',0.92);
+    if(scaledH<=PAGE_H){
+      pdf.addImage(img,'JPEG',0,0,PAGE_W,scaledH);
+    }else{
+      const sliceHSrc=PAGE_H*canvas.width/PAGE_W;
+      let y=0,first=true;
+      while(y<canvas.height){
+        const thisSliceH=Math.min(sliceHSrc,canvas.height-y);
+        const sliceCanvas=document.createElement('canvas');
+        sliceCanvas.width=canvas.width; sliceCanvas.height=thisSliceH;
+        const ctx=sliceCanvas.getContext('2d');
+        ctx.drawImage(canvas,0,y,canvas.width,thisSliceH,0,0,canvas.width,thisSliceH);
+        const sliceImg=sliceCanvas.toDataURL('image/jpeg',0.92);
+        const sliceScaledH=thisSliceH*PAGE_W/canvas.width;
+        if(!first)pdf.addPage([PAGE_W,PAGE_H],'p');
+        pdf.addImage(sliceImg,'JPEG',0,0,PAGE_W,sliceScaledH);
+        y+=thisSliceH; first=false;
+      }
+    }
+    const suffix=(mode==='current')?('-'+activeId):'-todo';
+    pdf.save('legion-dashboard'+suffix+'-'+iso(state.from)+'_'+iso(state.to)+'.pdf');
+  }catch(e){console.error(e);alert('No se pudo exportar el PDF: '+e.message);}
+  finally{
+    if(tempWrap)tempWrap.remove();
+    if(tb)tb.style.display='';
+    pages.forEach(pg=>pg.classList.remove('active')); if(activeId)document.getElementById(activeId).classList.add('active');
+    if(btn){btn.textContent=t0;btn.disabled=false;}
+  }
+}
 /* ===== Objetivos del mes ===== */
+async function loadInsights(area,elId){
+  const el=document.getElementById(elId);if(!el)return;
+  try{
+    const headers={apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY};
+    const base=SUPABASE_URL+'/rest/v1/legion_insights?select=notion_id,semana,area,responsable,estatus,accionable,impacto_esperado,resumen&order=semana.desc';
+    const get=async(u)=>{const r=await fetch(u,{headers});if(!r.ok)throw new Error('insights '+r.status);return r.json();};
+    // En el Sprint Review el campo Área suele venir vacío: si el filtro no devuelve nada,
+    // se muestran todas las conclusiones del cliente en vez de dejar el bloque en blanco.
+    let raw=await get(base+'&area=eq.'+encodeURIComponent(area));
+    if(!raw.length) raw=await get(base);
+    const seen={},rows=[];
+    raw.forEach(x=>{const id=x.notion_id||((x.semana||'-')+'|'+(x.estatus||''));if(seen[id])return;seen[id]=1;rows.push(x);});
+    if(!rows.length){el.innerHTML='<div class="ke-pg-sub">Sin conclusiones cargadas todavía.</div>';return;}
+    // Sin fecha en `Semana` la fila no puede ubicarse en ninguna tarjeta: se ignora
+    // (en Notion aparece como una conclusión sin semana asignada).
+    const bySem={},order=[];
+    rows.filter(x=>x.semana).forEach(x=>{const k=x.semana;if(!(k in bySem)){bySem[k]=[];order.push(k);}bySem[k].push(x);});
+    if(!order.length){el.innerHTML='<div class="ke-pg-sub">Hay conclusiones cargadas pero ninguna tiene fecha en el campo Semana.</div>';return;}
+    const weeks=order.slice(0,2).reverse();
+    const fmtWk=(s)=>{if(!s||s==='-')return '-';const d=new Date(s+'T00:00:00');return d.getDate()+' '+MES[d.getMonth()]+' '+d.getFullYear();};
+    const esc=(v)=>String(v).replace(/</g,'&lt;');
+    const cell=(l,v)=>v?('<div class="ke-ins-field"><div class="l">'+l+'</div><div class="v">'+esc(v)+'</div></div>'):'';
+    el.innerHTML=weeks.map((wk,i)=>{
+      const isCur=i===weeks.length-1;
+      const body=bySem[wk].map(it=>cell('Estatus',it.estatus)+cell('Accionable',it.accionable)+cell('Impacto esperado',it.impacto_esperado)+cell('Resumen',it.resumen)+(it.responsable?'<div class="ke-ins-resp">Responsable: '+esc(it.responsable)+'</div>':'')).join('<hr style="border:none;border-top:1px solid var(--ke-border);margin:14px 0">');
+      return '<div class="ke-ins-card'+(isCur?' cur':'')+'"><div class="ke-ins-wk">'+(isCur?'<b>Esta semana</b>':'Semana pasada')+' · '+fmtWk(wk)+'</div>'+body+'</div>';
+    }).join('');
+  }catch(e){console.error(e);el.innerHTML='<div class="ke-pg-sub">Error cargando conclusiones: '+e.message+'</div>';}
+}
 
 labelRange();
 loadData();
+loadInsights('Paid Media','insights-pm');
+loadInsights('Email Marketing','insights-em');
 let _mob=isMobile();
 window.addEventListener('resize',()=>{const m=isMobile();if(m!==_mob){_mob=m;if(_last)render(_last.c,_last.p,_last.D);}});
 
