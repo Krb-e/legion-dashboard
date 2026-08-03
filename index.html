@@ -611,8 +611,16 @@ function mkDonut(id,labels,data){
   charts[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[
     {data,backgroundColor:colors,borderWidth:0,weight:4},
     {data,backgroundColor:colors.map(c=>c+'55'),borderWidth:0,weight:1}
-  ]},options:{responsive:true,maintainAspectRatio:true,aspectRatio:1,cutout:'58%',plugins:{legend:{display:false},
-    datalabels:window.ChartDataLabels?{display:ctx=>ctx.datasetIndex===0,color:'#191919',font:{size:9,weight:700},formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((s,x)=>s+x,0);const pc=t?v/t*100:0;return pc>=6?pc.toFixed(0)+'%':'';}}:{display:false}}}});
+  ]},options:{responsive:true,maintainAspectRatio:true,aspectRatio:1,cutout:'58%',
+    layout:{padding:10},
+    plugins:{legend:{display:false},
+    datalabels:window.ChartDataLabels?{
+      display:ctx=>ctx.datasetIndex===0,
+      // anchor+align+offset centran el % en el medio del anillo; sin esto quedaba pegado al borde
+      anchor:'center', align:'center', offset:0, clamp:true, clip:false,
+      color:'#191919', font:{size:9,weight:700},
+      formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((s,x)=>s+x,0);const pc=t?v/t*100:0;return pc>=6?pc.toFixed(0)+'%':'';}
+    }:{display:false}}}});
 }
 function goTo(id,el){
   document.querySelectorAll('.ke-page').forEach(s=>s.classList.remove('active'));
@@ -722,24 +730,33 @@ async function runExportPDF(mode){
   }
 }
 /* ===== Objetivos del mes ===== */
+// Oculta el bloque y su encabezado de sección: si un área no tiene conclusiones,
+// no queda un título suelto con un cartel de "vacío".
+function ocultarInsights(el){
+  el.style.display='none';
+  const h=el.previousElementSibling;
+  if(h&&h.classList.contains('ke-sec-head')) h.style.display='none';
+}
 async function loadInsights(area,elId){
   const el=document.getElementById(elId);if(!el)return;
+  el.style.display='';
+  const _h=el.previousElementSibling;
+  if(_h&&_h.classList.contains('ke-sec-head')) _h.style.display='';
   try{
     const headers={apikey:SUPABASE_ANON_KEY,Authorization:'Bearer '+SUPABASE_ANON_KEY};
     const base=SUPABASE_URL+'/rest/v1/legion_insights?select=notion_id,semana,area,responsable,estatus,accionable,impacto_esperado,resumen&order=semana.desc';
     const get=async(u)=>{const r=await fetch(u,{headers});if(!r.ok)throw new Error('insights '+r.status);return r.json();};
-    // En el Sprint Review el campo Área suele venir vacío: si el filtro no devuelve nada,
-    // se muestran todas las conclusiones del cliente en vez de dejar el bloque en blanco.
-    let raw=await get(base+'&area=eq.'+encodeURIComponent(area));
-    if(!raw.length) raw=await get(base);
+    // Filtro ESTRICTO por Área: cada sección muestra solo lo etiquetado con su área en Notion.
+    // Si no hay nada cargado para esa área, la sección entera se oculta (no se muestra vacía).
+    const raw=await get(base+'&area=eq.'+encodeURIComponent(area));
     const seen={},rows=[];
     raw.forEach(x=>{const id=x.notion_id||((x.semana||'-')+'|'+(x.estatus||''));if(seen[id])return;seen[id]=1;rows.push(x);});
-    if(!rows.length){el.innerHTML='<div class="ke-pg-sub">Sin conclusiones cargadas todavía.</div>';return;}
+    if(!rows.length){ocultarInsights(el);return;}
     // Sin fecha en `Semana` la fila no puede ubicarse en ninguna tarjeta: se ignora
     // (en Notion aparece como una conclusión sin semana asignada).
     const bySem={},order=[];
     rows.filter(x=>x.semana).forEach(x=>{const k=x.semana;if(!(k in bySem)){bySem[k]=[];order.push(k);}bySem[k].push(x);});
-    if(!order.length){el.innerHTML='<div class="ke-pg-sub">Hay conclusiones cargadas pero ninguna tiene fecha en el campo Semana.</div>';return;}
+    if(!order.length){ocultarInsights(el);return;}
     const weeks=order.slice(0,2).reverse();
     const fmtWk=(s)=>{if(!s||s==='-')return '-';const d=new Date(s+'T00:00:00');return d.getDate()+' '+MES[d.getMonth()]+' '+d.getFullYear();};
     const esc=(v)=>String(v).replace(/</g,'&lt;');
@@ -749,13 +766,12 @@ async function loadInsights(area,elId){
       const body=bySem[wk].map(it=>cell('Estatus',it.estatus)+cell('Accionable',it.accionable)+cell('Impacto esperado',it.impacto_esperado)+cell('Resumen',it.resumen)+(it.responsable?'<div class="ke-ins-resp">Responsable: '+esc(it.responsable)+'</div>':'')).join('<hr style="border:none;border-top:1px solid var(--ke-border);margin:14px 0">');
       return '<div class="ke-ins-card'+(isCur?' cur':'')+'"><div class="ke-ins-wk">'+(isCur?'<b>Esta semana</b>':'Semana pasada')+' · '+fmtWk(wk)+'</div>'+body+'</div>';
     }).join('');
-  }catch(e){console.error(e);el.innerHTML='<div class="ke-pg-sub">Error cargando conclusiones: '+e.message+'</div>';}
+  }catch(e){console.error(e);ocultarInsights(el);}
 }
 
 labelRange();
 loadData();
 loadInsights('Paid Media','insights-pm');
-loadInsights('Email Marketing','insights-em');
 let _mob=isMobile();
 window.addEventListener('resize',()=>{const m=isMobile();if(m!==_mob){_mob=m;if(_last)render(_last.c,_last.p,_last.D);}});
 
