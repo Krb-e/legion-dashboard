@@ -608,19 +608,22 @@ function mkLine(id,labels,datasets,legend){
 function mkDonut(id,labels,data){
   const el=document.getElementById(id); if(!el)return; if(charts[id])charts[id].destroy();
   const colors=labels.map((_,i)=>PAL[i%PAL.length]);
-  charts[id]=new Chart(el,{type:'doughnut',data:{labels,datasets:[
-    {data,backgroundColor:colors,borderWidth:0,weight:4},
-    {data,backgroundColor:colors.map(c=>c+'55'),borderWidth:0,weight:1}
-  ]},options:{responsive:true,maintainAspectRatio:true,aspectRatio:1,cutout:'58%',
-    layout:{padding:10},
-    plugins:{legend:{display:false},
-    datalabels:window.ChartDataLabels?{
-      display:ctx=>ctx.datasetIndex===0,
-      // anchor+align+offset centran el % en el medio del anillo; sin esto quedaba pegado al borde
-      anchor:'center', align:'center', offset:0, clamp:true, clip:false,
-      color:'#191919', font:{size:9,weight:700},
-      formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((s,x)=>s+x,0);const pc=t?v/t*100:0;return pc>=6?pc.toFixed(0)+'%':'';}
-    }:{display:false}}}});
+  // UN solo dataset: con dos (el decorativo de weight:1) el anillo visible arrancaba al 66% del
+  // radio y las etiquetas centradas caian sobre el borde exterior. Con uno, el centro del arco
+  // es el centro real del anillo (cutout 58% -> etiqueta al 79% del radio).
+  charts[id]=new Chart(el,{type:'doughnut',
+    data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:true,aspectRatio:1,cutout:'58%',
+      layout:{padding:8},
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:c=>' '+c.label+': '+fmtInt(c.parsed)}},
+        datalabels:window.ChartDataLabels?{
+          anchor:'center', align:'center', offset:0, clamp:true,
+          color:'#191919', font:{size:9,weight:700},
+          // solo porciones con lugar suficiente; el resto ya figura en la leyenda
+          formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((s,x)=>s+x,0);const pc=t?v/t*100:0;return pc>=8?pc.toFixed(0)+'%':'';}
+        }:{display:false}}}
+  });
 }
 function goTo(id,el){
   document.querySelectorAll('.ke-page').forEach(s=>s.classList.remove('active'));
